@@ -107,9 +107,7 @@ struct netinfo_unix : public netinfo {
         return false;
     }
     virtual std::string _info(void) const {
-        std::ostringstream s;
-        s << "path:" << path;
-        return s.str();
+        return path;
     }
 };
 
@@ -133,7 +131,7 @@ netinfo::info(void) const
 {
     std::ostringstream s;
 //    s << "inode:" << inode;
-    s << " proto:" << proto;
+    s << proto;
     if (uid != -1)
         s << " uid:" << uid;
     s << " " << _info();

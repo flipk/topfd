@@ -2,7 +2,7 @@
 #include "protos.h"
 
 fdinfo::fdtype
-studylink(std::string &link, netinfo **nip, const netinfo_list &netsocks)
+studylink(std::string &link, int &inode, const netinfo_list &netsocks)
 {
     if (link.size() == 0)
     {
@@ -11,19 +11,11 @@ studylink(std::string &link, netinfo **nip, const netinfo_list &netsocks)
     }
     if (link[0] == '/')
     {
-        link.insert(0, "FILE: ");
         return fdinfo::FILE;
     }
     if (link.compare(0, 7, "socket:") == 0)
     {
-        int inode = atoi(link.c_str() + 8);
-        link.insert(0, "SOCKET: ");
-        netinfo_list::const_iterator it = netsocks.find(inode);
-        if (it != netsocks.end())
-        {
-            const netinfo * ni = it->second;
-            link += " " + ni->info();
-        }
+        inode = atoi(link.c_str() + 8);
         return fdinfo::SOCKET;
     }
     if (link.compare(0, 11, "anon_inode:") == 0)
@@ -33,7 +25,8 @@ studylink(std::string &link, netinfo **nip, const netinfo_list &netsocks)
     }
     if (link.compare(0, 5, "pipe:") == 0)
     {
-        link.insert(0, "PIPE: ");
+        inode = atoi(link.c_str() + 6);
+        link = "";
         return fdinfo::PIPE;
     }
     link.insert(0, "UNKNOWN: ");

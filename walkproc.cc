@@ -2,7 +2,7 @@
 #include "protos.h"
 
 bool
-walkproc(procinfo_list &procs, const netinfo_list &netsocks)
+walkproc(procinfo_list &procs, netinfo_list &netsocks)
 {
     pxfe_readdir   procd;
 
@@ -41,6 +41,7 @@ walkproc(procinfo_list &procs, const netinfo_list &netsocks)
             if (comm[comm.size()-1] == 10)
                 comm.resize(comm.size()-1);
 
+            size_t procinfo_ind = procs.size();
             procs.push_back(procinfo(pid, comm));
             procinfo &pi = procs.back();
 
@@ -63,16 +64,77 @@ walkproc(procinfo_list &procs, const netinfo_list &netsocks)
                         {
                             link.resize(s);
                             netinfo * ni = NULL;
-                            fdinfo::fdtype type = studylink(link, &ni,
+                            int inode = -1;
+                            fdinfo::fdtype type = studylink(link, inode,
                                                             netsocks);
-                            pi.fds.push_back(fdinfo(link, fd, type, ni));
+                            if (inode != -1)
+                            {
+                                netinfo_list::const_iterator it =
+                                    netsocks.find(inode);
+
+                                if (it == netsocks.end())
+                                {
+                                    if (type == fdinfo::PIPE)
+                                    {
+                                        ni = new netinfo_pipe(procs);
+                                        ni->inode = inode;
+                                        netsocks[inode] = ni;
+                                    }
+                                }
+                                else
+                                    ni = it->second;
+                                if (ni)
+                                    link += " " + ni->info();
+                            }
+                            pi.fds.push_back(fdinfo(link, fd,
+                                                    type, ni, inode));
+
+                            if (type == fdinfo::PIPE)
+                            {
+                                netinfo_pipe * p =
+                                    dynamic_cast<netinfo_pipe*>(ni);
+                                if (p)
+                                    p->add_proc_fd(procinfo_ind, fd);
+                            }
                         }
                     }
                 }
             }
         }
     }
-        // xxxxx match up all PIPEs to each other (and remember
-        //       there could be more than one if a fork)
+    for (size_t pind = 0; pind < procs.size(); pind++)
+    {
+        procinfo &pi = procs[pind];
+
+        for (size_t fdind = 0; fdind < pi.fds.size(); fdind++)
+        {
+            fdinfo &fi = pi.fds[fdind];
+            if (fi.type == fdinfo::PIPE)
+            {
+                netinfo_pipe *np = dynamic_cast<netinfo_pipe *>(fi.ni);
+                std::ostringstream s;
+                if (np)
+                {
+                    for (size_t pfdind = 0;
+                         pfdind < np->proc_inds.size();
+                         pfdind++)
+                    {
+                        netinfo_pipe::fdinfo_inds &fdii =
+                            np->proc_inds[pfdind];
+                        procinfo &foundpi = procs[fdii.proc_ind];
+                        if (foundpi.pid == pi.pid)
+                        {
+                            if (fi.fd != fdii.fd)
+                                s << "(self fd " << fdii.fd << ") ";
+                        }
+                        else
+                            s << "(pid " << foundpi.pid
+                              << ", fd " << fdii.fd << ") ";
+                    }
+                    fi.link += " " + s.str();
+                }
+            }
+        }
+    }
     return true;
 }
