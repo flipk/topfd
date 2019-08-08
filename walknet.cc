@@ -51,6 +51,29 @@ struct netinfo_tcp : public netinfo {
 
 // tcp6:
 //   sl  local_address                         remote_address                        st tx_queue rx_queue tr tm->when retrnsmt   uid  timeout inode
+//   0: 00000000000000000000000000000000:445C 00000000000000000000000000000000:0000 0A 00000000:00000000 00:00000000 00000000  1000        0 2720574 1 00000000d10cb252 100 0 0 10 0
+
+struct netinfo_tcp6 : public netinfo {
+    std::string local_addr;
+    std::string remote_addr;
+    netinfo_tcp6(void) : netinfo("tcp6") { }
+    virtual bool parse(const stringVector &fields) {
+        if (fields.size() > 10)
+        {
+            local_addr = fields[1];
+            remote_addr = fields[2];
+            uid = atoi(fields[7].c_str());
+            inode = atoi(fields[9].c_str());
+            return true;
+        }
+        return false;
+    }
+    virtual std::string _info(void) const {
+        std::ostringstream s;
+        s << "local:" << local_addr << " remote:" << remote_addr;
+        return s.str();
+    }
+};
 
 // udp:
 //   sl  local_address rem_address   st tx_queue rx_queue tr tm->when retrnsmt   uid  timeout inode ref pointer drops             
@@ -80,6 +103,29 @@ struct netinfo_udp : public netinfo {
 
 // udp6:
 //   sl  local_address                         remote_address                        st tx_queue rx_queue tr tm->when retrnsmt   uid  timeout inode ref pointer drops
+//  403: 00000000000000000000000000000000:9BEF 00000000000000000000000000000000:0000 07 00000000:00000000 00:00000000 00000000    70        0 25953 2 00000000abf8bf4d 0
+
+struct netinfo_udp6 : public netinfo {
+    std::string local_addr;
+    std::string remote_addr;
+    netinfo_udp6(void) : netinfo("udp6") { }
+    virtual bool parse(const stringVector &fields) {
+        if (fields.size() > 10)
+        {
+            local_addr = fields[1];
+            remote_addr = fields[2];
+            uid = atoi(fields[7].c_str());
+            inode = atoi(fields[9].c_str());
+            return true;
+        }
+        return false;
+    }
+    virtual std::string _info(void) const {
+        std::ostringstream s;
+        s << "local:" << local_addr << " remote:" << remote_addr;
+        return s.str();
+    }
+};
 
 // udplite
 //   sl  local_address rem_address   st tx_queue rx_queue tr tm->when retrnsmt   uid  timeout inode ref pointer drops             
@@ -113,7 +159,9 @@ struct netinfo_unix : public netinfo {
 
 #define PROTOLIST \
     PROTOITEM(tcp) \
+    PROTOITEM(tcp6) \
     PROTOITEM(udp) \
+    PROTOITEM(udp6) \
     PROTOITEM(unix)
 
 //static
