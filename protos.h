@@ -39,6 +39,7 @@ struct procinfo {
         : pid(_pid), comm(_comm) { }
     uint32_t pid;
     std::string comm;
+    std::string cmdline;
     fdinfo_list fds;
 };
 typedef std::vector<procinfo> procinfo_list;

@@ -30,12 +30,13 @@ walkproc(procinfo_list &procs, netinfo_list &netsocks)
             std::string procpath = "/proc/" + pidname;
             std::string comm;
 
-            pxfe_fd  commfd;
-            if (commfd.open(procpath + "/comm", O_RDONLY) == false)
-                continue;
-            if (commfd.read(comm, /*max*/ 256) == false)
-                continue;
-            commfd.close();
+            {
+                pxfe_fd  commfd;
+                if (commfd.open(procpath + "/comm", O_RDONLY) == false)
+                    continue;
+                if (commfd.read(comm, /*max*/ 256) == false)
+                    continue;
+            }
 
             // comm usually has a trailing newline
             if (comm[comm.size()-1] == 10)
@@ -44,6 +45,17 @@ walkproc(procinfo_list &procs, netinfo_list &netsocks)
             size_t procinfo_ind = procs.size();
             procs.push_back(procinfo(pid, comm));
             procinfo &pi = procs.back();
+
+            {
+                pxfe_fd cmdlinefd;
+                if (cmdlinefd.open(procpath + "/cmdline", O_RDONLY))
+                {
+                    if (cmdlinefd.read(pi.cmdline, 4096) == false)
+                        pi.cmdline = pi.comm;
+                }
+                else
+                    pi.cmdline = pi.comm;
+            }
 
             std::string fdpath = procpath + "/fd";
             pxfe_readdir fdd;
